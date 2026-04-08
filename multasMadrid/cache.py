@@ -97,10 +97,3 @@ class CacheURL(Cache):
     def delete(self, url):
         super().delete(self._hash_url(url))
 
-    if archivo.exists():
-        return archivo.read_text(encoding="utf-8")
-
-    respuesta = requests.get(url)
-    respuesta.raise_for_status()
-    archivo.write_text(respuesta.text, encoding="utf-8")
-    return respuesta.text
