@@ -1,24 +1,18 @@
-"""
-Hola
-Almacenamiento local de los datos descargados de las multas de tráfico del Ayuntamiento de Madrid.
-"""
 
-import hashlib
+# Almacenamiento local de los datos descargados de las multas de tráfico del Ayuntamiento de Madrid.
 import time
 from pathlib import Path
 import requests
+import hashlib
 
 class CacheError(Exception):
     """Error al usar la caché."""
     pass
 
-
 class Cache:
-
     BASE_DIR = Path(__file__).parent.parent / "cache"
 
     def __init__(self, app_name, obsolescence=7):
-        # Los datos se consideran obsoletos si tienen más de 7 días.
         self.app_name = app_name
         self.obsolescence = obsolescence
         self.cache_dir = self.BASE_DIR / app_name
@@ -50,7 +44,7 @@ class Cache:
         path = self._filepath(name)
         if not path.exists():
             raise CacheError(f"No existe {name} en la caché.")
-        return (time.time() - path.stat().st_mtime) * 1000 
+        return (time.time() - path.stat().st_mtime) * 1000
 
     def delete(self, name):
         path = self._filepath(name)
@@ -72,160 +66,41 @@ class Cache:
         age_days = (time.time() - path.stat().st_mtime) / 86400
         return age_days > self.obsolescence
 
-
 class CacheURL(Cache):
-    # Hereda Cache para añadir lógica que trabaja con URLs.
-    # En lugar de usar el nombre directo, guarda los datos con un hash de la URL.
-
-    """Caché para descargas de URLs.
-
-    Guarda la respuesta de una URL usando un hash como nombre.
-    """
+    """Caché para descargas de URLs usando hash md5 como nombre de fichero."""
 
     def _hash_url(self, url):
-        """
-        Crea un hash de la URL para usarlo como nombre de fichero.
-        """
         return hashlib.md5(url.encode("utf-8")).hexdigest()
 
     def get(self, url):
-        # Si el resultado está en caché y no está caducado, lo devuelve.
-        # Si no, descarga la URL y guarda el contenido.
-
-        """
-        Descarga la URL o devuelve el resultado de la caché si está fresco.
-
-        Variables:
-        url (str): La URL a descargar.
-
-        Output:
-        str: Contenido de la URL.
-
-        Ejemplos:
-        >>> cache.get("http://example.com")
-        '<html>...</html>'
-        """
         key = self._hash_url(url)
         if super().exists(key) and not self._is_obsolete(key):
             return super().load(key)
-
         try:
             response = requests.get(url, timeout=30)
             response.raise_for_status()
         except requests.RequestException as e:
             raise CacheError(f"Error al descargar {url}: {e}") from e
-
         content = response.text
         self.set(key, content)
         return content
 
     def exists(self, url):
-        """
-        Comprueba si existe el contenido de una URL en caché.
-
-        Variables:
-        url (str): La URL a comprobar.
-
-        Output:
-        bool: True si existe en caché.
-        """
         return super().exists(self._hash_url(url))
 
     def load(self, url):
-        """
-        Carga el contenido de una URL desde caché.
-
-        Variables:
-        url (str): La URL a cargar.
-
-        Output:
-        str: Contenido almacenado.
-        """
         return super().load(self._hash_url(url))
 
     def how_old(self, url):
-        """
-        Devuelve la edad de una URL en la caché.
-
-        Variables:
-        url (str): La URL a consultar.
-
-        Output:
-        float: Edad en milisegundos.
-        """
         return super().how_old(self._hash_url(url))
 
     def delete(self, url):
-        """
-        Borra de la caché el contenido asociado a una URL.
-
-        Variables:
-        url (str): La URL a borrar.
-
-        Output:
-        None
-        """
         super().delete(self._hash_url(url))
 
-    def exists(self, url):
-        """
-        Comprueba si la URL está en caché.
+    if archivo.exists():
+        return archivo.read_text(encoding="utf-8")
 
-        Variables:
-        url (str): La URL.
-
-        Output:
-        bool: True si existe.
-
-        Ejemplos:
-        >>> cache.exists("http://example.com")
-        True
-        """
-        return super().exists(self._hash_url(url))
-
-    def load(self, url):
-        """
-        Carga el contenido de la URL desde caché.
-
-        Variables:
-        url (str): La URL.
-
-        Output:
-        str: Contenido guardado.
-
-        Ejemplos:
-        >>> cache.load("http://example.com")
-        '<html>...</html>'
-        """
-        return super().load(self._hash_url(url))
-
-    def how_old(self, url):
-        """
-        Devuelve la edad de la URL en caché.
-
-        Variables:
-        url (str): La URL.
-
-        Output:
-        float: Edad en milisegundos.
-
-        Ejemplos:
-        >>> cache.how_old("http://example.com")
-        1000.0
-        """
-        return super().how_old(self._hash_url(url))
-
-    def delete(self, url):
-        """
-        Borra la URL de la caché.
-
-        Variables:
-        url (str): La URL.
-
-        Output:
-        None
-
-        Ejemplos:
-        >>> cache.delete("http://example.com")
-        """
-        return super().delete(self._hash_url(url))
+    respuesta = requests.get(url)
+    respuesta.raise_for_status()
+    archivo.write_text(respuesta.text, encoding="utf-8")
+    return respuesta.text
