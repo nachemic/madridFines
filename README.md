@@ -1,10 +1,4 @@
-﻿mf.add(2024, 12)
-print(mf.loaded)
-print(mf.data.head())
-mf.fines_hour("evolucion_multas.png")
-print(mf.fines_calification())
-print(mf.total_payment())
-# madridFines
+﻿# madridFines
 
 Proyecto sencillo para analizar multas de tráfico de Madrid.
 
