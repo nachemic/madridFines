@@ -5,7 +5,7 @@ Trabajo Final de Programación Avanzada en Python para analizar multas de tráfi
 ## Contenido del proyecto
 
 - Paquete Python `traficFines/`.
-- Notebook de la Etapa 1 en `enunciado/enunciado.ipynb`.
+- Notebook de la etapa 1 en `enunciado/enunciado.ipynb`.
 - Notebook de ejemplos y validación en `notebooks/ejemplos.ipynb`.
 - Tests automáticos en `tests/`.
 - Distribuciones generadas en `dist/`.
@@ -21,17 +21,19 @@ Dentro del paquete `traficFines/` están los módulos principales:
 ## Requisitos
 
 - Python 3.10 o superior.
-- Dependencias indicadas en `requirements.txt`.
+- `pip` disponible en el entorno.
 
 ## Instalación
 
-Instalar las dependencias:
+La recomendación es instalar directamente el fichero `.whl` generado en `dist/`:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install dist/traficfines-1.0.0-py3-none-any.whl
 ```
 
-Instalar el paquete en el entorno actual:
+Se instalarán también las dependencias necesarias del proyecto.
+
+Si se quiere trabajar desde el código fuente del repositorio:
 
 ```bash
 python -m pip install .
@@ -45,8 +47,6 @@ python -m pip install -e .
 
 ## Uso básico
 
-Ejemplo mínimo:
-
 ```python
 from traficFines import MadridFines
 
@@ -58,7 +58,7 @@ print(mf.fines_calification())
 print(mf.total_payment())
 ```
 
-Tambien puede importarse el módulo con el nombre que aparece en el enunciado:
+Tambien puede importarse el módulo de la siguiente forma:
 
 ```python
 from traficFines.madridFines import MadridFines
@@ -66,18 +66,18 @@ from traficFines.madridFines import MadridFines
 
 ## Notebooks
 
-- `enunciado/enunciado.ipynb`: desarrollo de la Etapa 1 con descarga, limpieza y preprocesamiento.
-- `notebooks/ejemplos.ipynb`: ejemplos de uso y validación manual de las clases y excepciones.
+- `enunciado/enunciado.ipynb`: desarrollo de la etapa 1 con descarga, limpieza y preprocesamiento.
+- `notebooks/ejemplos.ipynb`: ejemplos de uso y validación de las clases y excepciones.
 
 ## Tests
 
-Ejecutar los tests:
+Ejecución de los tests:
 
 ```bash
 python -m unittest discover tests
 ```
 
-Opcionalmente, para medir cobertura:
+Ejecución y medición de cobertura:
 
 ```bash
 python -m coverage run --source=traficFines -m unittest discover tests
@@ -86,11 +86,9 @@ python -m coverage report -m
 
 ## Generación del wheel
 
-Para generar el paquete distribuible:
-
 ```bash
 python -m pip install build
 python -m build
 ```
 
-Los archivos generados se guardan en `dist/`, incluyendo el fichero `.whl` pedido como requisito en enunciado.ipynb.
+Los archivos generados se guardan en `dist/`, incluyendo el fichero `.whl`.
