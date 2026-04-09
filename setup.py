@@ -1,5 +1,5 @@
 from pathlib import Path
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages # type: ignore
 
 README = Path(__file__).parent / "README.md"
 
@@ -17,6 +17,7 @@ setup(
         "pandas",
         "matplotlib",
         "numpy",
+        "beautifulsoup4",
     ],
     python_requires=">=3.10",
 )

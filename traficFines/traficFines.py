@@ -1,9 +1,10 @@
 import io
-import re
+from urllib.parse import urljoin
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import requests
+from bs4 import BeautifulSoup
 
 from .cache import CacheURL, CacheError
 
@@ -55,24 +56,27 @@ def get_url(year, month):
     except requests.RequestException as e:
         raise MadridError(f"No se pudo acceder al catálogo de multas: {e}") from e
 
-    html = response.text
+    soup = BeautifulSoup(response.text, "html.parser")
     section_id = f"collapse{year}-{MONTH_NAMES[month]}"
-    if section_id not in html:
+    section = soup.find(id=section_id)
+    if section is None:
         raise MadridError(f"No hay datos disponibles para {month:02d}/{year}")
 
     resource_label = f"Multas de circulación: detalle. {year} {MONTH_NAMES[month]}. Detalle"
-    match = re.search(
-        re.escape(resource_label) + r'.*?href="([^"]+/download/[^"]+\.csv)"',
-        html,
-        re.S,
-    )
-    if match is None:
+    resource_block = None
+    for candidate in section.find_all(True):
+        if resource_label in candidate.get_text(" ", strip=True):
+            resource_block = candidate
+            break
+
+    if resource_block is None:
         raise MadridError(f"No se pudo localizar la descarga para {month:02d}/{year}")
 
-    href = match.group(1)
-    if href.startswith("http"):
-        return href
-    return f"{ROOT.rstrip('/')}{href}"
+    link = resource_block.find("a", href=True)
+    if link is None:
+        raise MadridError(f"No se pudo localizar la descarga para {month:02d}/{year}")
+
+    return urljoin(ROOT, link["href"])
 
 
 class MadridFines:
