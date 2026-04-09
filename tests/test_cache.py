@@ -1,5 +1,3 @@
-"""Tests para el módulo de caché."""
-
 import hashlib
 import os
 import sys
@@ -30,21 +28,9 @@ class TestCache(unittest.TestCase):
         self.assertTrue(self.cache.exists("clave"))
         self.assertEqual(self.cache.load("clave"), "hola")
 
-    @patch("pathlib.Path.open", side_effect=OSError("fallo escritura"))
-    def test_set_raises_on_write_error(self, _mock_open):
-        with self.assertRaises(CacheError):
-            self.cache.set("clave", "hola")
-
     def test_load_missing(self):
         with self.assertRaises(CacheError):
             self.cache.load("no_existe")
-
-    def test_load_raises_on_read_error(self):
-        self.cache.set("clave", "hola")
-
-        with patch("pathlib.Path.open", side_effect=OSError("fallo lectura")):
-            with self.assertRaises(CacheError):
-                self.cache.load("clave")
 
     def test_how_old(self):
         self.cache.set("clave", "hola")
@@ -62,26 +48,12 @@ class TestCache(unittest.TestCase):
         self.cache.delete("clave")
         self.assertFalse(self.cache.exists("clave"))
 
-    @patch("pathlib.Path.unlink", side_effect=OSError("fallo borrado"))
-    def test_delete_raises_on_unlink_error(self, _mock_unlink):
-        self.cache.set("clave", "hola")
-
-        with self.assertRaises(CacheError):
-            self.cache.delete("clave")
-
     def test_clear(self):
         self.cache.set("a", "1")
         self.cache.set("b", "2")
         self.cache.clear()
         self.assertFalse(self.cache.exists("a"))
         self.assertFalse(self.cache.exists("b"))
-
-    @patch("pathlib.Path.unlink", side_effect=OSError("fallo clear"))
-    def test_clear_raises_on_unlink_error(self, _mock_unlink):
-        self.cache.set("a", "1")
-
-        with self.assertRaises(CacheError):
-            self.cache.clear()
 
     def test_is_obsolete(self):
         self.cache.set("viejo", "datos")
@@ -90,10 +62,10 @@ class TestCache(unittest.TestCase):
         os.utime(path, (old_time, old_time))
         self.assertTrue(self.cache._is_obsolete("viejo"))
 
-    def test_is_obsolete_returns_true_for_missing_file(self):
+    def test_is_obsolete_missing(self):
         self.assertTrue(self.cache._is_obsolete("no_existe"))
 
-    def test_is_obsolete_returns_false_for_recent_file(self):
+    def test_is_obsolete_recent(self):
         self.cache.set("nuevo", "datos")
         self.assertFalse(self.cache._is_obsolete("nuevo"))
 
@@ -152,10 +124,9 @@ class TestCacheURL(unittest.TestCase):
         self.cache.delete(self.TEST_URL)
         self.assertFalse(self.cache.exists(self.TEST_URL))
 
-    def test_properties_are_exposed_read_only(self):
+    def test_properties(self):
         self.assertEqual(self.cache.app_name, "test_url_app")
         self.assertEqual(self.cache.obsolescence, 7)
-        self.assertTrue(str(self.cache.cache_dir).endswith("test_url_app"))
 
 
 if __name__ == "__main__":

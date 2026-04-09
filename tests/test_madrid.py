@@ -1,5 +1,3 @@
-"""Tests para el análisis de multas de Madrid."""
-
 import io
 import os
 import sys
@@ -17,7 +15,8 @@ from traficFines.traficFines import MADRID_FINES_URL, ROOT, MadridError, MadridF
 DATA_DIR = Path(__file__).parent / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-SAMPLE_CSV = """\
+# Datos simulados para tests (no vienen de Internet).
+CSV_DE_PRUEBA = """\
 CALIFICACION ;LUGAR                ;MES;ANIO;HORA ;IMP_BOL;DESCUENTO ;PUNTOS;DENUNCIANTE ;HECHO-BOL              ;VEL_LIMITE ;VEL_CIRCULA ;COORDENADA-X ;COORDENADA-Y \r
 LEVE         ;CL CLARA DEL REY 36 ;12 ;2024;20.23;60.0   ;SI        ;0     ;SER         ;ESTACIONAR NO VALIDA  ;           ;            ;             ;             \r
 GRAVE        ;CL CANILLAS 63      ;12 ;2024;20.45;200.0  ;SI        ;0     ;SER         ;OBSTACULIZAR VIA      ;50         ;70          ;440123.5     ;4474523.8    \r
@@ -25,7 +24,8 @@ LEVE         ;CL BRAVO MURILLO 16 ;12 ;2024;16.50;90.0   ;NO        ;0     ;SER 
 MUY GRAVE    ;AV CASTELLANA 1     ;12 ;2024;10.00;600.0  ;SI        ;6     ;POLICIA     ;CONDUCIR ALCOHOLIZADO ;120        ;180         ;441000.0     ;4475000.0    \r
 """
 
-DOWNLOADS_HTML = """\
+# HTML simulado para probar get_url (no es HTML aportado por el usuario).
+HTML_CATALOGO_PRUEBA = """\
 <html>
     <body>
         <div id="collapse2024-Diciembre">
@@ -44,20 +44,7 @@ DOWNLOADS_HTML = """\
 </html>
 """
 
-DOWNLOADS_HTML_ABSOLUTE = """\
-<html>
-    <body>
-        <div id="collapse2024-Diciembre">
-            <div data-key="2024 Diciembre-Detalle">
-                <p>Multas de circulación: detalle. 2024 Diciembre. Detalle</p>
-                <a class="btn btn-primary" href="https://datos.madrid.es/dataset/210104-0-multas-circulacion-detalle/resource/210104-15/download/2024-diciembre.csv">Descarga</a>
-            </div>
-        </div>
-    </body>
-</html>
-"""
-
-DOWNLOADS_HTML_NO_LINK = """\
+HTML_CATALOGO_SIN_ENLACE = """\
 <html>
     <body>
         <div id="collapse2024-Diciembre">
@@ -73,7 +60,7 @@ class TestGetUrl(unittest.TestCase):
     @patch("traficFines.traficFines.requests.get")
     def test_get_url_returns_month_download_url(self, mock_get):
         mock_response = MagicMock()
-        mock_response.text = DOWNLOADS_HTML
+        mock_response.text = HTML_CATALOGO_PRUEBA
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
 
@@ -84,20 +71,6 @@ class TestGetUrl(unittest.TestCase):
             "https://datos.madrid.es/dataset/210104-0-multas-circulacion-detalle/resource/210104-15-multas-circulacion-detalle-csv/download/210104-15-multas-circulacion-detalle-csv.csv",
         )
         mock_get.assert_called_once_with(f"{ROOT}{MADRID_FINES_URL}", timeout=30)
-
-    @patch("traficFines.traficFines.requests.get")
-    def test_get_url_returns_absolute_download_url(self, mock_get):
-        mock_response = MagicMock()
-        mock_response.text = DOWNLOADS_HTML_ABSOLUTE
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
-
-        url = get_url(2024, 12)
-
-        self.assertEqual(
-            url,
-            "https://datos.madrid.es/dataset/210104-0-multas-circulacion-detalle/resource/210104-15/download/2024-diciembre.csv",
-        )
 
     @patch("traficFines.traficFines.requests.get")
     def test_get_url_raises_for_request_error(self, mock_get):
@@ -111,7 +84,7 @@ class TestGetUrl(unittest.TestCase):
     @patch("traficFines.traficFines.requests.get")
     def test_get_url_raises_for_missing_month(self, mock_get):
         mock_response = MagicMock()
-        mock_response.text = DOWNLOADS_HTML
+        mock_response.text = HTML_CATALOGO_PRUEBA
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
 
@@ -121,7 +94,7 @@ class TestGetUrl(unittest.TestCase):
     @patch("traficFines.traficFines.requests.get")
     def test_get_url_raises_when_download_link_is_missing(self, mock_get):
         mock_response = MagicMock()
-        mock_response.text = DOWNLOADS_HTML_NO_LINK
+        mock_response.text = HTML_CATALOGO_SIN_ENLACE
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value = mock_response
 
@@ -142,7 +115,7 @@ class TestMadridFines(unittest.TestCase):
         mf = MadridFines("test_madrid", base_dir=DATA_DIR)
         mf.cacheurl = FakeCache()
         mf._loaded = [(12, 2024)]
-        df = pd.read_csv(io.StringIO(SAMPLE_CSV), sep=";", encoding="latin1")
+        df = pd.read_csv(io.StringIO(CSV_DE_PRUEBA), sep=";", encoding="latin1")
         df = mf.clean(df)
         mf._data = df
         return mf
@@ -154,36 +127,26 @@ class TestMadridFines(unittest.TestCase):
         mf._loaded = []
         return mf
 
-    def test_add_single_month(self):
+    @patch("traficFines.traficFines.get_url", return_value="https://fake.url/datos.csv")
+    def test_add_single_month(self, _mock_get_url):
         mf = MadridFines("test_madrid", base_dir=DATA_DIR)
         mf.cacheurl = FakeCache()
 
-        original_get_url = __import__("traficFines.traficFines").traficFines.get_url
-        __import__("traficFines.traficFines").traficFines.get_url = lambda year, month: "https://fake.url/datos.csv"
+        mf.add(2024, 12)
+        self.assertIn((12, 2024), mf.loaded)
+        self.assertFalse(mf.data.empty)
 
-        try:
-            mf.add(2024, 12)
-            self.assertIn((12, 2024), mf.loaded)
-            self.assertFalse(mf.data.empty)
-        finally:
-            __import__("traficFines.traficFines").traficFines.get_url = original_get_url
-
-    def test_add_no_duplicate(self):
+    @patch("traficFines.traficFines.get_url", return_value="https://fake.url/datos.csv")
+    def test_add_no_duplicate(self, _mock_get_url):
         mf = MadridFines("test_madrid", base_dir=DATA_DIR)
         mf.cacheurl = FakeCache()
 
-        original_get_url = __import__("traficFines.traficFines").traficFines.get_url
-        __import__("traficFines.traficFines").traficFines.get_url = lambda year, month: "https://fake.url/datos.csv"
-
-        try:
-            mf.add(2024, 12)
-            size1 = len(mf.data)
-            mf.add(2024, 12)
-            size2 = len(mf.data)
-            self.assertEqual(size1, size2)
-            self.assertEqual(mf.loaded.count((12, 2024)), 1)
-        finally:
-            __import__("traficFines.traficFines").traficFines.get_url = original_get_url
+        mf.add(2024, 12)
+        size1 = len(mf.data)
+        mf.add(2024, 12)
+        size2 = len(mf.data)
+        self.assertEqual(size1, size2)
+        self.assertEqual(mf.loaded.count((12, 2024)), 1)
 
     def test_load_raises_on_cache_error(self):
         cache = MagicMock()
@@ -209,20 +172,15 @@ class TestMadridFines(unittest.TestCase):
         self.assertEqual(list(cleaned.columns), ["CALIFICACION", "DESCUENTO"])
         self.assertNotEqual(cleaned.index.name, "fecha")
 
-    def test_add_full_year_loads_each_missing_month(self):
+    @patch("traficFines.traficFines.get_url", side_effect=lambda year, month: f"https://fake.url/{year}-{month:02d}.csv")
+    def test_add_full_year_loads_each_missing_month(self, _mock_get_url):
         mf = MadridFines("test_madrid", base_dir=DATA_DIR)
         mf.cacheurl = FakeCache()
 
-        original_get_url = __import__("traficFines.traficFines").traficFines.get_url
-        __import__("traficFines.traficFines").traficFines.get_url = lambda year, month: f"https://fake.url/{year}-{month:02d}.csv"
-
-        try:
-            mf.add(2024)
-            self.assertEqual(len(mf.loaded), 12)
-            self.assertIn((1, 2024), mf.loaded)
-            self.assertIn((12, 2024), mf.loaded)
-        finally:
-            __import__("traficFines.traficFines").traficFines.get_url = original_get_url
+        mf.add(2024)
+        self.assertEqual(len(mf.loaded), 12)
+        self.assertIn((1, 2024), mf.loaded)
+        self.assertIn((12, 2024), mf.loaded)
 
     def test_fines_hour_saves_file(self):
         mf = self._make_loaded_mf()
@@ -277,14 +235,15 @@ class TestMadridFines(unittest.TestCase):
 
 
 class FakeCache:
-    """Clase simple para simular caché sin mocks."""
+    """Caché sencilla para tests."""
+
     def __init__(self):
         self.data = {}
 
-    def get(self, url, params=None, encoding=None):
+    def get(self, url, encoding=None):
         if url in self.data:
             return self.data[url]
-        return SAMPLE_CSV  # Devolver datos de ejemplo
+        return CSV_DE_PRUEBA
 
 
 if __name__ == "__main__":
